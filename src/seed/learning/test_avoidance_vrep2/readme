@@ -1,0 +1,17 @@
+questo apprendimento è stato fatto per testare le capacità del learning. Non è stato fatto in maniera rigorosa.
+
+	- la cartella 1 in realtà contiene il risultato di 3-4 epoche.
+	
+	- tra le varie epoche riportate ce ne sono state altre "scartate" a causa delle varie prove fatte sul learning
+	
+	- nella epoca 4 (quindi appena dopo la 3) era stato cancellato il peso di teleology (tutte le correzioni venivano fatte dopo che il goal era raggiunto quindi il peso di teleology è andato rapidamente a negativo)
+	
+	- dal 5 in poi si passa alla scena learning2_FAST
+	
+	- ad 8 c'è convergenza per learning2_FAST
+	
+	- da 9 si passa al learning3_FAST
+	
+	- a 10 converge su learning3_FAST
+	
+	- la 10 ha buone performance anche su learning4_FAST (con uomini nella scena)

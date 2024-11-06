@@ -1,0 +1,44 @@
+{
+  "manche": 1,
+  "markers":
+    {
+      "uav": [101, 310],
+      "ugv": [110, 410],
+      "uxv": [210]
+    },
+  "object_detection":
+    {
+      "class": ["backpack","stop_sign"]
+    },
+  "picture_from_ptz":
+    {
+    "coordinates_world":
+      {
+        "x": 12.0,
+        "y": 8.0
+      }
+    },
+  "follow_me":
+    {
+    "wps_coordinates_world":
+      [
+        [10.0, 5.0],
+        [10.0, 7.0],
+        [7.0, 7.0],
+        [7.0, 5.0]
+      ],
+    "time": 60
+    },
+  "emergency_task":
+    {
+      "landing":{
+        "marker": 101,
+        "time": 5
+      },
+      "RTB":{
+        "marker": 410,
+        "time": 35
+      }
+    }
+ }
+ 
