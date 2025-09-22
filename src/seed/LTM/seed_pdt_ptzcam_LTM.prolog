@@ -97,8 +97,10 @@ schema(q, [[forget(alive),0,["TRUE"]]], [], [] ).
 
 schema(lnd_camera,[
 	[tfobserver,0,["TRUE"]],
-	[team\picture,1,[target.found]],
-	[explore,1,[-error]]],
+	%[team\picture,1,[target.found]],
+	%[explore,1,[-error]]],
+	[watchto(target1),0,["TRUE"]],
+	[watchto(target2),0,["TRUE"]],
 	[home.reached, mapping.done, target.followed],
 	[] ).
 	
@@ -119,8 +121,8 @@ schema(explore, [], [explore.done], [] ).
 schema(takepicture, [], [], [picture.done] ).
 
 schema(watchto(target), [], [], [target.distance] )
-
 schema(watchto(X), [], [X.reached], [X.distance] ).
+
 
 schema(flyto(X), [], [X.reached], [X.distance] ).
 

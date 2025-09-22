@@ -37,20 +37,20 @@ def generate_launch_description():
             parameters=[
                #{"frames_to_explore": ["exp1","exp2","exp3","exp4"]}
                #{"frames_to_explore": ["exp00","exp10","exp20","exp30","exp01","exp11","exp21","exp31"]}
-               {"frames_to_explore": ["exp00","exp10","exp01","exp11"]}
+               {"frames_to_explore": ["exp00","exp10","exp01","exp11","expcen"]}
             ]
         ),
-        Node(
-            package='seed',
-            executable='seed',
-            name='mimic',
-            output="screen",
-            #output={"both","rover_ros2_log.txt"},
-            arguments=["pdt_rover"],
-            parameters=[
-               #{"frames_to_explore": ["exp1","exp2","exp3","exp4"]}
-               #{"frames_to_explore": ["exp00","exp10","exp20","exp30","exp01","exp11","exp21","exp31"]}
-               {"frames_to_explore": ["exp00","exp10","exp01","exp11"]}
-            ]
-        )
+        # Node(
+        #     package='seed',
+        #     executable='seed',
+        #     name='mimic',
+        #     output="screen",
+        #     #output={"both","rover_ros2_log.txt"},
+        #     arguments=["pdt_rover"],
+        #     parameters=[
+        #        #{"frames_to_explore": ["exp1","exp2","exp3","exp4"]}
+        #        #{"frames_to_explore": ["exp00","exp10","exp20","exp30","exp01","exp11","exp21","exp31"]}
+        #        {"frames_to_explore": ["exp00","exp10","exp01","exp11"]}
+        #     ]
+        # )
     ])

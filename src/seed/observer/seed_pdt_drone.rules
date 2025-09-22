@@ -7,8 +7,8 @@ exists(base_link,target) -> target.found
 #1 / xydist(base_link,exp20) ~> exp20.distance
 #1 / xydist(base_link,exp30) ~> exp30.distance
 #1 / xydist(base_link,exp40) ~> exp40.distance
-#1 / xydist(base_link,exp01) ~> exp01.distance
-#1 / xydist(base_link,exp11) ~> exp11.distance
+1 / xydist(base_link,exp01) ~> exp01.distance
+1 / xydist(base_link,exp11) ~> exp11.distance
 #1 / xydist(base_link,exp21) ~> exp21.distance
 #1 / xydist(base_link,exp31) ~> exp31.distance
 #1 / xydist(base_link,exp41) ~> exp41.distance
@@ -31,8 +31,8 @@ exists(base_link,target) -> target.found
 #0.3 > xydist(base_link,exp20) -> exp20.reached
 #0.3 > xydist(base_link,exp30) -> exp30.reached
 #0.3 > xydist(base_link,exp40) -> exp40.reached
-#0.3 > xydist(base_link,exp01) -> exp01.reached
-#0.3 > xydist(base_link,exp11) -> exp11.reached
+0.3 > xydist(base_link,exp01) -> exp01.reached
+0.3 > xydist(base_link,exp11) -> exp11.reached
 #0.3 > xydist(base_link,exp21) -> exp21.reached
 #0.3 > xydist(base_link,exp31) -> exp31.reached
 #0.3 > xydist(base_link,exp41) -> exp41.reached

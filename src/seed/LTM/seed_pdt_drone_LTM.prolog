@@ -110,9 +110,9 @@ schema(patrol\and\return,[
 	[] ).
 	
 schema(map\and\seek,[
-	[explore,0,["TRUE"]],
+	[explore,0,["TRUE"]] ],
 	%[follow(target),0,[target.followed]] ],
-	[team\picture,0,[target.found]] ],
+	%[team\picture,0,[target.found]] ],
 	[mapping.done, target.followed],
 	[] ).
 
@@ -128,7 +128,7 @@ schema(team\picture,[
 	[] ).
 	
 schema(emergency\land,[
-	[land,10,[armed]] ],
+	[land,10,["TRUE"]] ],
 	[landed],
 	[] ).
 
@@ -143,6 +143,8 @@ schema(land, [], [landed], [] ).
 schema(explore, [], [explore.done], [] ).
 
 schema(flyto(target), [], [], [target.distance] ).
+
+schema(flyto(circle(X)), [], [circle(X).done], [X.distance] ).
 
 schema(flyto(X), [], [X.reached], [X.distance] ).
 
