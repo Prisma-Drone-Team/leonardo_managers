@@ -95,6 +95,23 @@ schema(q, [[forget(alive),0,["TRUE"]]], [], [] ).
 %	(eg1) ros2 service call /seed_lnd_drone/set_regulation_value seed_interfaces/SetRegulationValue "{source: 'map.unknown', value: 0.2}"
 %	(eg2) ros2 topic pub /seed_lnd_drone/state std_msgs/String "data: target.found" --once
 
+schema(lnd_test(T,Deadline,ID),[
+	[deadline(lnd_test(T,Deadline,ID),Deadline),1,["TRUE"]], 
+	[photo(T,once,ID),5,["TRUE"]] ],
+	[T.once.accepted],
+	[] ).
+
+
+% deadline task, kill a task when deadline is reached
+%	NOTE: this must be added as subtask (it will be forgotten too)
+schema(deadline(Task,Deadline),[
+	[timer(Task.expired,true,Deadline),1,["TRUE"]],
+	[forget(Task),1,[Task.expired]] ],
+	[],
+	[] ).
+
+
+% default behaviors, always on during execution independently from the mission
 schema(lnd_aerial,[
 	[tfobserver,0,["TRUE"]],
 	[emergency\land,0,[error]],
@@ -102,17 +119,61 @@ schema(lnd_aerial,[
 	[landed, mapping.done, target.followed],
 	[] ).
 
+% find object (drone version), priority: 5
+%	NOTE: this only performs circle when target object is found
+schema(find_object(T,Deadline,ID),[
+	[deadline(find_object(T,Deadline,ID),Deadline),1,["TRUE"]],
+	[circle(T),5,[T.exists]], 
+	[photo(T,continuous,ID),5,[circle(T).running]] ],
+	[circle(T).done],
+	[] ).
+
+% find target (drone version), priority: 1-2
+%	NOTE: T.observed must be stated by the GCS after the operator's ok
+schema(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),[
+	[deadline(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),Deadline),1,["TRUE"]],
+	[cover(Z1,Z2,Z3,Z4),1,[-T.exists]],
+	[flyto(T,observe),2,[T.exists]],
+	[photo(T,first,ID),2,[T.reached]],
+	[timer(T.second.ready,true,2.1),1,[T.first.confirmed]],
+	[photo(T,second,ID),2,[T.second.ready]],
+	[timer(T.observed,true,0.1),1,[T.second.confirmed]] ],
+	[T.observed],
+	[] ).
+
+% follow sequence
+%	NOTE: this can be implemented through a hardSequence as follows:
+%		   hardSequence([fly_by(T1),fly_by(T2), ..., fly_by(TN)])
+schema(follow_sequence(S,Deadline,ID),[
+	[deadline(follow_sequence(S,Deadline,ID),Deadline),1,["TRUE"]],
+	[hardSequence(S,fs),5,["TRUE"]] ],
+	[hardSequence(fs).done],
+	[] ).
+
+schema(fly_by(T,ID),[
+	[flyto(T,observe),2,[T.exists]],
+	[photo(T,once,ID),2,[T.reached]],
+	[timer(T.observed,true,0.1),1,[T.once.confirmed]] ],
+	[T.observed],
+	[] ).
+
+% land highest spot
+%	NOT YET IMPLEMENTED
+
+% emergency landing
+%	NOT YET IMPLEMENTED
+
+
+
 schema(patrol\and\return,[
 	[takeoff,1,[landed,-armed]],
-	[map\and\seek,1,[flying]],
+	%[map\and\seek,1,[flying]],
 	[go\rest\home,1,[flying, mapping.done, target.followed]] ],
 	[landed, mapping.done, target.followed],
 	[] ).
 	
 schema(map\and\seek,[
 	[explore,0,["TRUE"]] ],
-	%[follow(target),0,[target.followed]] ],
-	%[team\picture,0,[target.found]] ],
 	[mapping.done, target.followed],
 	[] ).
 
@@ -122,10 +183,6 @@ schema(go\rest\X,[
 	[landed, X.reached],
 	[] ).
 
-schema(team\picture,[
-	[flyto(target),0,["TRUE"]] ],
-	[picture.done],
-	[] ).
 	
 schema(emergency\land,[
 	[land,10,["TRUE"]] ],
@@ -142,15 +199,19 @@ schema(land, [], [landed], [] ).
 
 schema(explore, [], [explore.done], [] ).
 
-schema(flyto(target), [], [], [target.distance] ).
+schema(photo(X,Type,_), [], [X.Type.confirmed], [X.distance] ).
 
 schema(flyto(circle(X)), [], [circle(X).done], [X.distance] ).
+
+schema(flyto(X, observe), [], [X.observed], [X.distance] ).
 
 schema(flyto(X), [], [X.reached], [X.distance] ).
 
 schema(goto(X), [], [X.reached], [X.distance] ).
 
 schema(follow(T), [], [T.followed], [T.distance] ).
+
+schema(cover(Z1,Z2,Z3,Z4), [], [cover(Z1,Z2,Z3,Z4).done], [] ).
 
 schema(wait, [], [], [] ).
 
@@ -246,6 +307,17 @@ schema(rosState(_,_), [], [], [] ).
 %	T1,T2 are names of Tf frames
 %	Var is the WMV to be set
 schema(rosObs(_,_,_,_,_,_), [], [], [] ).
+
+%hardSequence(TASK_LIST): sequential behavior used to implement HARD sequence in SEED
+schema(hardSequence(_,ID), [], [hardSequence(ID).done], [] ).
+
+%softSequence(TASK_LIST): sequential behavior used to implement SOFT sequence in SEED
+schema(softSequence(_,ID), [], [softSequence(ID).done], [] ).
+
+%timer(X,V,W): set the WM variable X to a value V after W seconds (waiting time)
+schema(timer(V,true,_), [], [V], [] ).
+schema(timer(V,false,_), [], [-V], [] ).
+schema(timer(_,_,_), [], [], [] ).
 
 
 

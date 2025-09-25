@@ -1,0 +1,95 @@
+{
+    "task_id": 0,       # an univoque id randomly generated to identify the task 
+    "task_type": "",    # find_target, find_object, follow_sequence, land_highest_spot, emergency_landing, return_to_base
+    "agent": "",        # uav, ugv, ptz
+    "marker_type": "",  # aruco, qr
+    "marker_id": "",    # value of marker id 
+    "request_time": "", # "YYYY/MM/DD HH:MM:SS"
+    "deadline": "",     # "YYYY/MM/DD HH:MM:SS"
+    "zone": "",         # [(v1, v2), (v3, v4), (v5, v6), (v7, v8)] (set of vertices)
+    "max_value": 0      # maximum points obtainable for this task
+}
+
+{
+    "task_id": 13,       
+    "task_type": "find_tartget",     
+    "agent": "uav",        
+    "target_type": "aruco",
+    "target_id": "123",    
+    "request_time": "2025/10/23 ",
+    "deadline": "2025/10/23",     
+    "zone": "[(1, 2), (2, 2), (3,3), (4, 4)]",         
+    "max_value": 0      
+}
+
+{
+    "task_id": 0,       
+    "task_type": "find_object",     
+    "agent": "ugv",        
+    "target_type": "object",  
+    "target_id": "teddy_bear",    
+    "request_time": "2025/10/23 ",
+    "deadline": "2025/10/23",     # +30 min
+    "zone": "None",         
+    "max_value": 0      
+}
+
+{
+    "task_id": 0,       
+    "task_type": "find_object",     
+    "agent": "ugv",        
+    "target_type": "object",  
+    "target_id": "teddy_bear",    
+    "request_time": "2025/10/23 ",
+    "deadline": "2025/10/23",     
+    "zone": "None",         
+    "max_value": 0      
+}
+
+{
+    "task_id": 0,       
+    "task_type": "follow sequence",     
+    "agent": "ugv",        
+    "target_type": "aruco",  
+    "target_id": "[1, 2, 3, 4, 5]]",    
+    "request_time": "2025/10/23 ",
+    "deadline": "2025/10/23",     
+    "zone": "None",         
+    "max_value": 0      
+}
+
+{
+    "task_id": 0,       
+    "task_type": "land_highest_spot",     
+    "agent": "uav",        
+    "target_type": "None",  
+    "target_id": "None",    
+    "request_time": "2025/10/23 ",
+    "deadline": "2025/10/23",     
+    "zone": "None",         
+    "max_value": 0      
+}
+
+{
+    "task_id": 0,       
+    "task_type": "emergency_landing",     
+    "agent": "uav",        
+    "target_type": "None",  
+    "target_id": "None",    
+    "request_time": "2025/10/23 ",
+    "deadline": "2025/10/23",   # 30 sec - 1 min  
+    "zone": "None",         
+    "max_value": 0      
+}
+
+{
+    "task_id": 0,       
+    "task_type": "return_to_base",     
+    "agent": "None",        
+    "target_type": "None",  
+    "target_id": "None",    
+    "request_time": "2025/10/23 ",
+    "deadline": "2025/10/23",   # 2 min
+    "zone": "None",         
+    "max_value": 0      
+}

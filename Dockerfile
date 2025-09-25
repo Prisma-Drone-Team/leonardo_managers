@@ -35,6 +35,11 @@ RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
 	#libxcb-randr0-dev libxcb-xtest0-dev libxcb-xinerama0-dev libxcb-shape0-dev libxcb-xkb-dev \
 	#libxcb-util-dev \
 	libxcb-xinerama0 \
+	# canberra for display
+	libcanberra-gtk-module \
+    	libcanberra-gtk3-module \
+    	at-spi2-core \
+    	dbus-x11 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y ros-${ROS_DISTRO}-rqt*

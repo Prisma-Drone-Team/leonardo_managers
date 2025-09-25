@@ -70,8 +70,9 @@ includeEffect(Schema,X):-
 schema(alive,[
 	[inputStream,0,["TRUE"]],
 	[rosStream,0,["TRUE"]],
+	[ldc_rover_task,0,["TRUE"]],%[start,-stop]],
 	%[gui,0,["TRUE"]],
-	[lnd_ground,0,[start,-stop]],
+	[show(ldc_rover_task),0,["TRUE"]],
 	[memory,0,["TRUE"]],
 	[requestStream,0,["TRUE"]] ],
 	[],
@@ -85,37 +86,20 @@ schema(q, [[forget(alive),0,["TRUE"]]], [], [] ).
 %%-- Leonardo Comeptition Drone Domain
 
 % HOW TO RUN:
-%	TERMINAL1: ros2 run seed seed pdt_drone
-%	TERMINAL2: ros2 topic pub /seed_pdt_drone/state std_msgs/String "data: landed" --once
+%	TERMINAL1: ros2 run seed seed pdt_rover
 %	TERMINAL1: gui
-%	TERMINAL1: lnd_aerial
-%	TERMINAL3: ros2 topic echo /seed_pdt_drone/command
+%	TERMINAL1: lnd_terrestrial
+%	TERMINAL3: ros2 topic echo /seed_pdt_rover/command
 %
 % USE TOPICS/SERVICES ON TERMINAL3 TO CHANGE THE STATE OF THE SYSTEM:
-%	(eg1) ros2 service call /seed_lnd_drone/set_regulation_value seed_interfaces/SetRegulationValue "{source: 'map.unknown', value: 0.2}"
-%	(eg2) ros2 topic pub /seed_lnd_drone/state std_msgs/String "data: target.found" --once
+%	(eg1) ros2 service call /seed_lnd_rover/set_regulation_value seed_interfaces/SetRegulationValue "{source: 'map.unknown', value: 0.2}"
+%	(eg2) ros2 topic pub /seed_lnd_rover/regulation std_msgs/String "data: map.unknown 0.2" --once
+%	(eg3) ros2 topic pub /seed_lnd_rover/state std_msgs/String "data: target.found" --once
 
-schema(lnd_test(T,Deadline,ID),[
-	[deadline(lnd_test(T,Deadline,ID),Deadline),1,["TRUE"]], 
-	[photo(T,once,ID),5,["TRUE"]] ],
-	[T.once.accepted],
-	[] ).
-
-
-% deadline task, kill a task when deadline is reached
-%	NOTE: this must be added as subtask (it will be forgotten too)
-schema(deadline(Task,Deadline),[
-	[timer(Task.expired,true,Deadline),1,["TRUE"]],
-	[forget(Task),1,[Task.expired]] ],
-	[],
-	[] ).
-
-
-% default behaviors, always on during execution independently from the mission
-schema(lnd_ground,[
-	[tfobserver,0,["TRUE"]] ],
+schema(lnd_terrestrial,[
+	[tfobserver,0,["TRUE"]],
 	%[patrol\and\return,1,[-error,drone.flying]]],
-	%[patrol\and\return,1,[-error]]],
+	[patrol\and\return,1,[-error]]],
 	[home.reached, mapping.done, target.followed],
 	[] ).
 
@@ -131,56 +115,51 @@ schema(map\and\seek,[
 	[team\picture,0,[target.found]] ],
 	[mapping.done, target.followed],
 	[] ).
+	
+schema(team\picture,[
+	[goto(target),0,["TRUE"]] ],
+	[picture.done],
+	[] ).
+	
+	
+% new LDC tasks (2024)
 
-
-
-% find object (drone version), priority: 5
-%	NOTE: this explores and search for the target
-schema(find_object(T,Deadline,ID),[
-	[deadline(find_object(T,Deadline,ID),Deadline),1,["TRUE"]],
-	[explore,1,[-T.exists]],
-	[goto(T.target),5,[T.exists]], 
-	[photo(T,once,ID),5,[T.target.reached]] ],
-	[T.once.confirmed],
+schema(ldc_rover_task,[
+	[tfobserver,0,["TRUE"]],
+	[team\follow\path,0,[team.path.enabled]],
+	[team\return\base,0,[team.return.enabled]],
+	%[team\picture,0,["TRUE"]],
+	[explore,0,["TRUE"]] ],
+	[],
 	[] ).
 
-% find target (drone version), priority: 1-2
-%	NOTE: T.observed must be stated by the GCS after the operator's ok
-schema(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),[
-	[deadline(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),Deadline),1,["TRUE"]],
-	[cover(Z1,Z2,Z3,Z4),1,[-T.exists]],
-	[goto(T.target,observe),2,[T.exists]],
-	[photo(T,first,ID),2,[T.target.reached]],
-	[timer(T.second.ready,true,2.1),1,[T.first.confirmed]],
-	[photo(T,second,ID),2,[T.second.ready]],
-	[timer(T.observed,true,0.1),1,[T.second.confirmed]] ],
-	[T.observed],
+schema(team\follow\path,[
+	[meet\at\path0,0,["TRUE"]],
+	[followPath,0,[drone.path0.ready,rover.path0.ready]], 
+	[rosState(path.accomplished,seed/state),0,[followPath.done]] ],
+	[path.accomplished],
 	[] ).
-
-% follow sequence
-%	NOTE: this can be implemented through a hardSequence as follows:
-%		   hardSequence([fly_by(T1),fly_by(T2), ..., fly_by(TN)])
-schema(follow_sequence(S,Deadline,ID),[
-	[deadline(follow_sequence(S,Deadline,ID),Deadline),1,["TRUE"]],
-	[hardSequence(S,fs),5,["TRUE"]] ],
-	[hardSequence(fs).done],
+	
+schema(meet\at\P,[
+	[goto(P),0,["TRUE"]],
+	[wait,0,[P.reached]],
+	[rosState(rover.P.ready,seed/state),0,[P.reached]] ],
+	[rover.P.ready,drone.P.ready],
 	[] ).
-
-schema(move_by(T,ID),[
-	[goto(T.target,observe),2,[T.exists]],
-	[photo(T,once,ID),2,[T.target.reached]],
-	[timer(T.observed,true,0.1),1,[T.once.confirmed]] ],
-	[T.observed],
+	
+schema(team\return\base,[
+	[goto(home),0,["TRUE"]],
+	[wait,0,[home.reached]],
+	[rosState(rover.returned.home,seed/state),0,[home.reached]] ],
+	[rover.returned.home,drone.returned.home],
 	[] ).
-
-% emergency rtb, priority 10
-schema(emergency_rtb(Deadline,ID),[
-	[deadline(emergency_rtb(Deadline,ID),Deadline),1,["TRUE"]],
-	[goto(home,observe),10,["TRUE"]] ],
-	[home.reached],
+	
+schema(team\picture,[
+	[goto(picture),0,["TRUE"]],
+	[wait,0,[picture.reached]],
+	[rosState(rover.picture.ready,seed/state),0,[picture.reached]] ],
+	[picture.accomplished], %NOTE: this must be communicated by PTZ
 	[] ).
-
-
 
 % CONCRETE:
 
@@ -190,19 +169,11 @@ schema(land, [], [landed], [] ).
 
 schema(explore, [], [explore.done], [] ).
 
-schema(photo(X,Type,_), [], [X.Type.confirmed], [X.distance] ).
-
-schema(flyto(circle(X)), [], [circle(X).done], [X.distance] ).
-
-schema(flyto(X, observe), [], [X.observed], [X.distance] ).
-
 schema(flyto(X), [], [X.reached], [X.distance] ).
 
-schema(goto(X, observe), [], [X.observed], [X.distance] ).
+schema(goto(target), [], [], [target.distance] ).
 
 schema(goto(X), [], [X.reached], [X.distance] ).
-
-schema(cover(Z1,Z2,Z3,Z4), [], [cover(Z1,Z2,Z3,Z4).done], [] ).
 
 schema(follow(T), [], [T.followed], [T.distance] ).
 
@@ -306,11 +277,6 @@ schema(hardSequence(_,ID), [], [hardSequence(ID).done], [] ).
 
 %softSequence(TASK_LIST): sequential behavior used to implement SOFT sequence in SEED
 schema(softSequence(_,ID), [], [softSequence(ID).done], [] ).
-
-%timer(X,V,W): set the WM variable X to a value V after W seconds (waiting time)
-schema(timer(V,true,_), [], [V], [] ).
-schema(timer(V,false,_), [], [-V], [] ).
-schema(timer(_,_,_), [], [], [] ).
 
 
 
