@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
+from tf2_ros import Buffer, TransformListener, LookupException, ConnectivityException, ExtrapolationException
 from std_msgs.msg import String
 import threading
 import requests
 import json
 import os
 from datetime import datetime
+
+import numpy as np
 
 import re
 
@@ -31,6 +34,24 @@ class HttpBridgeNode(Node):
         self.request_db = dict()
         self.sequence_db = dict()
 
+        # MAP OF LEONARDO SECTORS (STATIC)
+        self.id_matrix = np.array([
+            [ 7, 7, 7, 7, 7, 5, 5, 5, 5, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2 ],
+            [ 7, 7, 6, 7, 7, 5, 5, 5, 5, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2 ],
+            [ 7, 7, 6, 7, 7, 5, 5, 5, 5, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2 ],
+            [ 7, 7, 6, 6, 6, 6, 6, 5, 5, 4, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1 ],
+            [ 7, 7, 6, 6, 6, 5, 5, 5, 5, 4, 3, 3, 3, 4, 1, 1, 1, 1, 1, 1 ],
+            [ 7, 7, 6, 6, 6, 6, 6, 5, 5, 4, 3, 3, 3, 4, 1, 1, 1, 1, 1, 1 ],
+            [ 8, 8, 8, 8, 8, 8, 5, 5, 5, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1 ],
+            [ 8, 8, 8, 8, 8, 8, 5, 5, 5, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1 ],
+            [ 8, 8, 8, 8, 8, 8, 5, 5, 5, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1 ],
+            [ 8, 8, 8, 8, 8, 8, 5, 5, 5, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1 ] ])
+        
+        # TF buffer and listener
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+
         # Params
         self.declare_parameter('server_url', 'http://127.0.0.1:5000')
         self.declare_parameter('client_id', 'unina_client')
@@ -45,6 +66,34 @@ class HttpBridgeNode(Node):
         self.stream_thread.start()
 
         self.get_logger().info("HTTP Bridge Node started")
+
+    def lookup_target_sector(self, target_frame: String) -> String:
+        try:
+            # Lookup transform from map -> target
+            trans = self.tf_buffer.lookup_transform(
+                'map',
+                target_frame,
+                rclpy.time.Time()
+            )
+
+            # Extract x, y coordinates
+            x = trans.transform.translation.x
+            y = trans.transform.translation.y
+            self.get_logger().info(f"Target pose in map: x={x:.2f}, y={y:.2f}")
+
+            # Convert to matrix indices
+            i = int(y)  # row index
+            j = 19 - int(x)  # column index
+            if 0 <= i < self.id_matrix.shape[0] and 0 <= j < self.id_matrix.shape[1]:
+                cell_id = self.id_matrix[i, j]
+                self.get_logger().info(f"Matrix indices: ({i}, {j}), ID={cell_id}")
+                return cell_id
+            else:
+                self.get_logger().warn("Target out of matrix bounds!")
+                return "None"
+
+        except (LookupException, ConnectivityException, ExtrapolationException):
+            self.get_logger().warn("Transform not available")
 
 
     def handle_ptz_task(self, msg: String):
@@ -385,13 +434,14 @@ class HttpBridgeNode(Node):
             have_file = True
         elif self.request_db[id]["task_type"] == "find_target":
             # OK
+            sect = self.lookup_target_sector(self.request_db[id]["target"])
             json_reply = {
                 "task_id": id,
                 "task_type": self.request_db[id]["task_type"],
                 "target": self.request_db[id]["target"],
                 "request_time": self.request_db[id]["request_time"],
                 "completion_time": timestamp,
-                "result": "2"
+                "result": sect
             }
             have_file = True
         elif self.request_db[id]["task_type"] == "ptz_collab":

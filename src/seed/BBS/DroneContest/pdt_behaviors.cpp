@@ -98,12 +98,19 @@ bool PhotoBehaviour::perceptualSchema(){
     else if(!was_active && now_active){
 
         if(SEED_NAME == "seed_pdt_drone"){
-            sb_image = nh->create_subscription<sensor_msgs::msg::CompressedImage>("/image_raw/compressed", 
+            sb_image = nh->create_subscription<sensor_msgs::msg::CompressedImage>("/drone_aruco_detector/result_img/compressed", 
             rclcpp::SensorDataQoS(), std::bind(&PhotoBehaviour::img_callback, this, _1));
         }
         else if(SEED_NAME == "seed_pdt_rover"){
-            sb_image = nh->create_subscription<sensor_msgs::msg::CompressedImage>("/todo_rover_image_topic", 
-            rclcpp::SensorDataQoS(), std::bind(&PhotoBehaviour::img_callback, this, _1));
+
+            if(arg(1) == "teddy_bear" || arg(1) == "traffic_light" || arg(1) == "plant" || arg(1) == "fire_hydrant" ){
+                sb_image = nh->create_subscription<sensor_msgs::msg::CompressedImage>("/yolo/prediction/image/compressed", 
+                rclcpp::SensorDataQoS(), std::bind(&PhotoBehaviour::img_callback, this, _1));
+            }
+            else{
+                sb_image = nh->create_subscription<sensor_msgs::msg::CompressedImage>("/rover_aruco_detector/result_img/compressed", 
+                rclcpp::SensorDataQoS(), std::bind(&PhotoBehaviour::img_callback, this, _1));
+            }
 
         }
     }
@@ -590,7 +597,8 @@ ExploreBehaviour::ExploreBehaviour(std::string instance): rnd(std::random_device
     //explorables.push_back("exp4");
 
     //get from ROS2 param
-    nh->declare_parameter("frames_to_explore", std::vector<std::string>());
+    std::vector<std::string> default_exp = { "exp00", "exp01", "exp10", "exp11" };
+    nh->declare_parameter("frames_to_explore", default_exp);
     nh->get_parameter("frames_to_explore",explorables);
 
     std::fill_n(std::back_inserter(weights), explorables.size(), 0.0);

@@ -73,7 +73,8 @@ schema(alive,[
 	%[gui,0,["TRUE"]],
 	[lnd_ground,0,[start,-stop]],
 	[memory,0,["TRUE"]],
-	[requestStream,0,["TRUE"]] ],
+	[requestStream,0,["TRUE"]],
+	[show(requestStream),0,["TRUE"]] ],
 	[],
 	[] ).
 	
@@ -139,8 +140,8 @@ schema(map\and\seek,[
 schema(find_object(T,Deadline,ID),[
 	[deadline(find_object(T,Deadline,ID),Deadline),1,["TRUE"]],
 	[explore,1,[-T.exists]],
-	[goto(T.target),5,[T.exists]], 
-	[photo(T,once,ID),5,[T.target.reached]] ],
+	%[goto(T.target),5,[T.exists]], 
+	[photo(T,once,ID),5,[T.exists]] ],
 	[T.once.confirmed],
 	[] ).
 
@@ -176,7 +177,7 @@ schema(move_by(T,ID),[
 % emergency rtb, priority 10
 schema(emergency_rtb(Deadline,ID),[
 	[deadline(emergency_rtb(Deadline,ID),Deadline),1,["TRUE"]],
-	[goto(home,observe),10,["TRUE"]] ],
+	[goto(rover/map,observe),10,["TRUE"]] ],
 	[home.reached],
 	[] ).
 

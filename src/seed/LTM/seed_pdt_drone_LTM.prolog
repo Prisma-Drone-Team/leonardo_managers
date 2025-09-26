@@ -71,9 +71,11 @@ schema(alive,[
 	[inputStream,0,["TRUE"]],
 	[rosStream,0,["TRUE"]],
 	%[gui,0,["TRUE"]],
-	[lnd_aerial,0,[start,-stop]],
+	%[lnd_aerial,0,[start,-stop]],
+	[lnd_airborn,0,[start,-stop]],
 	[memory,0,["TRUE"]],
-	[requestStream,0,["TRUE"]] ],
+	[requestStream,0,["TRUE"]],
+	[show(requestStream),0,["TRUE"]] ],
 	[],
 	[] ).
 	
@@ -86,9 +88,7 @@ schema(q, [[forget(alive),0,["TRUE"]]], [], [] ).
 
 % HOW TO RUN:
 %	TERMINAL1: ros2 run seed seed pdt_drone
-%	TERMINAL2: ros2 topic pub /seed_pdt_drone/state std_msgs/String "data: landed" --once
-%	TERMINAL1: gui
-%	TERMINAL1: lnd_aerial
+%	TERMINAL2: ros2 topic pub /seed_pdt_drone/state std_msgs/String "data: start" --once
 %	TERMINAL3: ros2 topic echo /seed_pdt_drone/command
 %
 % USE TOPICS/SERVICES ON TERMINAL3 TO CHANGE THE STATE OF THE SYSTEM:
@@ -112,6 +112,16 @@ schema(deadline(Task,Deadline),[
 
 
 % default behaviors, always on during execution independently from the mission
+schema(lnd_airborn,[
+	[tfobserver,0,["TRUE"]],
+	[takeoff,1,[landed,-armed]] ],
+	[],
+	[] ).
+
+
+
+
+%%OLD
 schema(lnd_aerial,[
 	[tfobserver,0,["TRUE"]],
 	[emergency\land,0,[error]],
@@ -123,7 +133,7 @@ schema(lnd_aerial,[
 %	NOTE: this only performs circle when target object is found
 schema(find_object(T,Deadline,ID),[
 	[deadline(find_object(T,Deadline,ID),Deadline),1,["TRUE"]],
-	[circle(T),5,[T.exists]], 
+	[circle(T),5,[T.exists, flying]], 
 	[photo(T,continuous,ID),5,[circle(T).running]] ],
 	[circle(T).done],
 	[] ).
@@ -132,9 +142,9 @@ schema(find_object(T,Deadline,ID),[
 %	NOTE: T.observed must be stated by the GCS after the operator's ok
 schema(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),[
 	[deadline(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),Deadline),1,["TRUE"]],
-	[cover(Z1,Z2,Z3,Z4),1,[-T.exists]],
-	[flyto(T,observe),2,[T.exists]],
-	[photo(T,first,ID),2,[T.reached]],
+	[cover(Z1,Z2,Z3,Z4),1,[-T.exists, flying]],
+	[flyto(T.target,observe),2,[T.exists, flying]],
+	[photo(T,first,ID),2,[T.target.reached]],
 	[timer(T.second.ready,true,2.1),1,[T.first.confirmed]],
 	[photo(T,second,ID),2,[T.second.ready]],
 	[timer(T.observed,true,0.1),1,[T.second.confirmed]] ],
@@ -151,8 +161,8 @@ schema(follow_sequence(S,Deadline,ID),[
 	[] ).
 
 schema(fly_by(T,ID),[
-	[flyto(T,observe),2,[T.exists]],
-	[photo(T,once,ID),2,[T.reached]],
+	[flyto(T.target,observe),2,[T.exists, flying]],
+	[photo(T,once,ID),2,[T.target.reached]],
 	[timer(T.observed,true,0.1),1,[T.once.confirmed]] ],
 	[T.observed],
 	[] ).
