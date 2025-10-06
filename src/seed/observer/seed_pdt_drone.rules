@@ -1,6 +1,6 @@
 exists(base_link,target) -> target.found
 0.5 > zdiff(map,base_link) -> landed
-1.4 < zdiff(map,base_link) -> flying
+1.1 < zdiff(map,base_link) -> flying
 1 / xydist(base_link,target) ~> target.distance
 1 / xydist(base_link,exp00) ~> exp00.distance
 1 / xydist(base_link,exp10) ~> exp10.distance

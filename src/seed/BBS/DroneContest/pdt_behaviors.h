@@ -65,6 +65,7 @@ protected:
 
     bool have_image;
 
+    cv::Mat ros_image;
     cv::Mat current_image;
     cv::Mat old_image;
 

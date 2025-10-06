@@ -517,6 +517,309 @@ protected:
 
 
 
+
+class ObsBehavior : public WMVBehavior{
+public:
+    ObsBehavior(std::string instance){
+        setInstance(instance);
+        setRtm(QUIESCENCE);
+
+        std::string target_tf = instance2vector(instance)[1];
+        std::string base_tf;
+
+        //HARDCODED FOR LEONARDO!
+        if(SEED_NAME == "seed_pdt_drone"){
+            base_tf = "base_link";
+        }
+        else if(SEED_NAME == "seed_pdt_rover"){
+            base_tf = "rover/base_link";
+        }
+
+        //set common rules for this TF
+        str_rules.push_back("1 / xydist(" + base_tf + "," + target_tf +") ~> " + target_tf + ".distance");
+        str_rules.push_back("0.3 > xydist(" + base_tf + "," + target_tf + ") -> " + target_tf + ".reached");
+        str_rules.push_back("exists(" + base_tf + "," + target_tf + ") -> " + target_tf + ".exists");
+        //exists(base_link,target) -> target.found
+
+        ////from observer/SEED_NAME.rules
+        //std::ifstream infile(SEED_HOME_PATH + "/observer/" + SEED_NAME + ".rules");
+        //if (infile.is_open()) {
+        //    std::string line;
+        //    while (std::getline(infile, line))
+        //        str_rules.push_back(line);
+        //    infile.close();
+        //}
+        //else
+        //    std::cout<<ansi::cyan<<"parsing file does not exists! "<<std::endl<<
+        //        SEED_HOME_PATH<<"/observer/"<<SEED_NAME<<".rules"<<ansi::end<<std::endl;
+
+        //initialize buffer
+        tf_buffer = std::make_unique<tf2_ros::Buffer>(nh->get_clock());
+        //initialize listener
+        tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
+        
+
+        //parse rules
+        for(size_t i=0; i<str_rules.size(); i++){
+            if(str_rules[i][0] != '#')
+                rules.push_back(ParsedRule(str_rules[i]));
+                std::cout<<ansi::magenta<<"loading rule "<<str_rules[i]<<ansi::end<<std::endl;
+        }
+            
+    }
+    std::string getName(){
+        return "obs";
+    }
+    bool perceptualSchema()
+    {
+        
+        //get values from ROS2 TF2
+        results.clear();
+        for(size_t i=0; i<rules.size(); i++){
+            geometry_msgs::msg::TransformStamped t;
+            KnownValue kv;
+            //std::cout<<ansi::magenta<<"checking rule "<<rules[i].function<<" "<<rules[i].parameter1<<" "<<rules[i].parameter2<<" "<<rules[i].target<<ansi::end<<std::endl;
+            if(get_tf2(rules[i].parameter1,rules[i].parameter2,t)){
+                kv.known = true;
+                //std::cout<<ansi::magenta<<"KNOWN!"<<ansi::end<<std::endl;
+
+                if(rules[i].function == "xdiff")
+                    kv.v = xdiff(t);
+                else if(rules[i].function == "ydiff")
+                    kv.v = ydiff(t);
+                else if(rules[i].function == "zdiff")
+                    kv.v = zdiff(t);
+                else if(rules[i].function == "eudist")
+                    kv.v = eudist(t);
+                else if(rules[i].function == "xydist")
+                    kv.v = xydist(t);
+                else if(rules[i].function == "adist"){
+                    kv.v = adist(t);
+                    //std::cout<<ansi::magenta<<"adist "<<rules[i].parameter1<<" to "<<rules[i].parameter2<<": "<<kv.v<<ansi::end<<std::endl;
+                }
+                else if(rules[i].function == "exists")
+                    kv.v = 1.0;
+                else
+                    kv.known = false;
+            }
+            else if(rules[i].function == "exists"){
+                kv.known = true;
+                kv.v = 0.0;
+                //std::cout<<ansi::magenta<<"UNKNOWN! (not exists)"<<ansi::end<<std::endl;
+            }
+            else{
+                kv.known = false;
+                //std::cout<<ansi::magenta<<"UNKNOWN!"<<ansi::end<<std::endl;
+            }
+                
+
+            results.push_back(kv);
+        }
+        //
+        
+
+        pthread_mutex_lock(&memMutex);
+
+        for(size_t i=0; i<rules.size(); i++){
+            if(!results[i].known){
+                //std::cout<<ansi::cyan<<"rule "<<i<<" unknown:"<<ansi::end<<std::endl;
+                //std::cout<<ansi::cyan<<"\t "<<str_rules[i]<<ansi::end<<std::endl;
+                continue;
+            }
+
+            if(rules[i].type == "->" && rules[i].op == ">"){
+                if(rules[i].value > results[i].v)
+                    wmv_set<bool>(rules[i].target,true);
+                else
+                    wmv_set<bool>(rules[i].target,false);
+            }
+            else if(rules[i].type == "->" && rules[i].op == "<"){
+                if(rules[i].value < results[i].v)
+                    wmv_set<bool>(rules[i].target,true);
+                else
+                    wmv_set<bool>(rules[i].target,false);
+            }
+            else if(rules[i].type == "->" && rules[i].function == "exists"){
+                //if(rules[i].value > 0.5)
+                if(results[i].v > 0.5)
+                    wmv_set<bool>(rules[i].target,true);
+                else
+                    wmv_set<bool>(rules[i].target,false);
+
+                //std::cout<<ansi::magenta<<rules[i].target<<" SET TO "<<wmv_get<bool>(rules[i].target)<<ansi::end<<std::endl;
+            }
+            else if(rules[i].type == "~>" && rules[i].op == "*"){
+                //WM->updateContribution(rules[i].target, rules[i].value * results[i].v);
+                WM->setContribution(rules[i].target, rules[i].value * results[i].v);
+            }
+            else if(rules[i].type == "~>" && rules[i].op == "/"){
+                //WM->updateContribution(rules[i].target, rules[i].value / results[i].v);
+                WM->setContribution(rules[i].target, rules[i].value / results[i].v);
+            }
+            else{
+                std::cout<<ansi::cyan<<"unable to execute rule "<<i<<":"<<ansi::end<<std::endl;
+                std::cout<<ansi::cyan<<"\t "<<str_rules[i]<<":"<<ansi::end<<std::endl;
+            }
+        }
+
+        pthread_mutex_unlock(&memMutex);
+
+        return true;
+    }
+    void motorSchema()
+    {
+        //empty
+    }
+    void start()
+    {
+    }
+    void exit()
+    {
+        pthread_mutex_lock(&memMutex);
+        wmv_set<bool>(this->getInstance() + ".done", false);
+        pthread_mutex_unlock(&memMutex);
+    }
+protected:
+
+    class ParsedRule{
+        public:
+        ParsedRule(std::string str){
+            parse(str);
+        }
+
+        //simple parser
+        void parse(std::string str){
+            std::istringstream ss1(str);
+            std::istringstream ss2(str);
+            //std::cout<<ansi::cyan<<"parsing: "<<str<<ansi::end<<std::endl;
+            good = false;
+            if(ss1 >> value >> op >> function >> type >> target){
+                std::vector<std::string> fv = instance2vector(function);
+                if(fv.size() == 3){
+                    function = fv[0];
+                    parameter1 = fv[1];
+                    parameter2 = fv[2];
+                    good = true;
+                    //std::cout<<ansi::cyan<<"\t STRING IS GOOD"<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t function: "<<function<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t parameter1: "<<parameter1<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t parameter2: "<<parameter2<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t op: "<<op<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t value: "<<value<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t type: "<<type<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t target: "<<target<<ansi::end<<std::endl;
+                }
+                else
+                    std::cout<<ansi::cyan<<"TF-OBSERVER ERROR: BAD STRING err2"<<ansi::end<<std::endl;
+            }
+            else if(ss2 >> function >> type >> target){
+                std::vector<std::string> fv = instance2vector(function);
+                if(fv.size() == 3){
+                    function = fv[0];
+                    parameter1 = fv[1];
+                    parameter2 = fv[2];
+                    good = true;
+                    //std::cout<<ansi::cyan<<"\t STRING IS GOOD"<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t function: "<<function<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t parameter1: "<<parameter1<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t parameter2: "<<parameter2<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t type: "<<type<<ansi::end<<std::endl;
+                    //std::cout<<ansi::cyan<<"\t target: "<<target<<ansi::end<<std::endl;
+                }
+                else
+                    std::cout<<ansi::cyan<<"TF-OBSERVER ERROR: BAD STRING err2"<<ansi::end<<std::endl;
+            }
+            else
+                std::cout<<ansi::cyan<<"TF-OBSERVER ERROR: BAD STRING err1"<<ansi::end<<std::endl;
+            
+        }
+
+        bool good;
+        std::string function;
+        std::string parameter1;
+        std::string parameter2;
+        std::string op;
+        double value;
+        std::string type;
+        std::string target;
+    };
+
+    struct KnownValue{
+        bool known;
+        double v;
+    };
+
+    bool get_tf2(std::string start_frame, std::string target_frame, geometry_msgs::msg::TransformStamped &t){
+        try {
+            //t = tf_buffer->lookupTransform(target_frame, start_frame, tf2::TimePointZero);
+            t = tf_buffer->lookupTransform(start_frame, target_frame, tf2::TimePointZero);
+            
+            //t = tf_buffer->lookupTransform(target_frame, start_frame, nh->get_clock()->now(),rclcpp::Duration(1000000));
+            return true;
+        } catch (const tf2::TransformException & ex) {
+            return false;
+        }
+    }
+
+    // difference along the Z axis
+    inline double zdiff(geometry_msgs::msg::TransformStamped t){
+        return t.transform.translation.z;
+    }
+
+    // difference along the X axis
+    inline double xdiff(geometry_msgs::msg::TransformStamped t){
+        return t.transform.translation.x;
+    }
+
+    // difference along the Y axis
+    inline double ydiff(geometry_msgs::msg::TransformStamped t){
+        return t.transform.translation.y;
+    }
+
+    // Euclidean distance
+    inline double eudist(geometry_msgs::msg::TransformStamped t){
+        return sqrt(pow(t.transform.translation.x,2)+pow(t.transform.translation.y,2)+pow(t.transform.translation.z,2));
+    }
+
+    // planar distance along X and Y axis
+    inline double xydist(geometry_msgs::msg::TransformStamped t){
+        return sqrt(pow(t.transform.translation.x,2)+pow(t.transform.translation.y,2));
+    }
+
+    // Angular distance
+    inline double adist(geometry_msgs::msg::TransformStamped t){
+        double vx,vy,vz;
+        
+        return sqrt(pow(t.transform.translation.y,2.0)+pow(t.transform.translation.z,2.0));
+        
+        double norm = sqrt(pow(t.transform.translation.x,2)+pow(t.transform.translation.y,2)+pow(t.transform.translation.z,2));
+        vx = t.transform.translation.x / norm;
+        vy = t.transform.translation.y / norm;
+        vz = t.transform.translation.z / norm;
+
+        double tetha = atan2(vy,vx);
+        double phi = atan2(vx,vz);
+        
+        return (tetha + phi)/2;
+    }
+
+    std::string ego_frame;
+
+    std::vector<std::string> str_rules;
+    std::vector<ParsedRule> rules;
+    std::vector<KnownValue> results;
+
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener{nullptr};
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer;
+
+    //rclcpp::Node::SharedPtr nh;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pbs;
+};
+
+
+
+
+
 class TfObserverBehavior : public WMVBehavior{
 public:
     TfObserverBehavior(std::string instance){
@@ -615,7 +918,8 @@ public:
                     wmv_set<bool>(rules[i].target,false);
             }
             else if(rules[i].type == "->" && rules[i].function == "exists"){
-                if(rules[i].value > 0.5)
+                //if(rules[i].value > 0.5)
+                if(results[i].v > 0.5)
                     wmv_set<bool>(rules[i].target,true);
                 else
                     wmv_set<bool>(rules[i].target,false);

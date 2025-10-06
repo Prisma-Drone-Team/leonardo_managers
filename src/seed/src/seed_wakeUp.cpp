@@ -92,6 +92,8 @@ bool wakeUp(std::string behavior, std::string instance){
         obj=new RosActBehavior(instance);
     else if(behavior=="tfobserver")
         obj=new TfObserverBehavior(instance);
+    else if(behavior=="obs")
+        obj=new ObsBehavior(instance);
 
 #if SHOW_Behavior
     else if(behavior=="show")

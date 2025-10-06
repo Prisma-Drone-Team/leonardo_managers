@@ -98,7 +98,7 @@ bool PhotoBehaviour::perceptualSchema(){
     else if(!was_active && now_active){
 
         if(SEED_NAME == "seed_pdt_drone"){
-            sb_image = nh->create_subscription<sensor_msgs::msg::CompressedImage>("/drone_aruco_detector/result_img/compressed", 
+            sb_image = nh->create_subscription<sensor_msgs::msg::CompressedImage>("/aruco_detector/result_img/compressed", 
             rclcpp::SensorDataQoS(), std::bind(&PhotoBehaviour::img_callback, this, _1));
         }
         else if(SEED_NAME == "seed_pdt_rover"){
@@ -138,6 +138,9 @@ void PhotoBehaviour::motorSchema(){
         return;
 
     have_image = false;
+    current_image = ros_image.clone();
+
+    std::cout<<"RUNNING PHOTO"<<std::endl;
 
     //check which mode
     if(mode == "once"){
@@ -146,10 +149,10 @@ void PhotoBehaviour::motorSchema(){
         cv::imshow(getInstance(), display_image);
         
         if(wait_for_click() && image_accepted){
-            save_image(mode,arg(1) + "_" + mode);
+            save_image(mode,arg(1));
 
             wm_lock();
-            std::string var = arg(1) + "." + arg(2) + ".accepted";
+            std::string var = arg(1) + "." + arg(2) + ".confirmed";
             wmv_set<bool>(var,true);
             wm_unlock();
 
@@ -158,6 +161,7 @@ void PhotoBehaviour::motorSchema(){
             std_msgs::msg::String msg;
             msg.data = "(" + arg(3) + "," + current_timestamp + "," + dir_path + "/" + arg(1) + "_" + mode + ".png" + ")";
             pbs->publish(msg);
+            std::cout<<"SENDING TO GCS: "<<msg.data<<std::endl;
         }
         
         
@@ -173,11 +177,12 @@ void PhotoBehaviour::motorSchema(){
         
         if(wait_for_click() && image_accepted){
             wm_lock();
-            std::string var = arg(1) + "." + arg(2) + ".accepted";
+            std::string var = arg(1) + "." + arg(2) + ".confirmed";
             wmv_set<bool>(var,true);
             wm_unlock();
 
-            old_image = current_image.clone();
+            //old_image = current_image.clone();
+            save_image(mode,arg(1));
 
             //publish result to gcs ?
         }
@@ -193,10 +198,10 @@ void PhotoBehaviour::motorSchema(){
         cv::imshow(getInstance(), display_image);
 
         if(wait_for_click() && image_accepted){
-            save_image(mode,arg(1) + "_" + mode);
+            save_image(mode,arg(1));
 
             wm_lock();
-            std::string var = arg(1) + "." + arg(2) + ".accepted";
+            std::string var = arg(1) + "." + arg(2) + ".confirmed";
             wmv_set<bool>(var,true);
             wm_unlock();
 
@@ -204,6 +209,7 @@ void PhotoBehaviour::motorSchema(){
             std_msgs::msg::String msg;
             msg.data = "(" + arg(3) + "," + current_timestamp + "," + dir_path + "/" + arg(1) + "_" + mode + ".png" + ")";
             pbs->publish(msg);
+            std::cout<<"SENDING TO GCS: "<<msg.data<<std::endl;
         }
         
         cv::destroyWindow(getInstance());
@@ -213,7 +219,7 @@ void PhotoBehaviour::motorSchema(){
     }
     //otherwise, we have to take a video!
     else {
-        save_image(mode, arg(1) + "_" + mode);
+        save_image(mode, arg(1));
         sleep(1); // around 1 fps
     }
 }
@@ -248,12 +254,12 @@ void PhotoBehaviour::img_callback(const sensor_msgs::msg::CompressedImage::Share
     try {
         //cv::Mat ros_image = cv::imdecode(cv::Mat(msg->data), cv::IMREAD_COLOR);
         //ros_image.convertTo(current_image, CV_8U, 255.0);
-        current_image = cv::imdecode(cv::Mat(msg->data), cv::IMREAD_COLOR);
+        ros_image = cv::imdecode(cv::Mat(msg->data), cv::IMREAD_COLOR);
         
-        if(!current_image.empty()) {
+        if(!ros_image.empty()) {
             // Aggiungi timestamp e data
             current_timestamp = format_timestamp_with_date(msg->header.stamp);
-            add_timestamp_to_image(current_image, current_timestamp);
+            add_timestamp_to_image(ros_image, current_timestamp);
 
             have_image = true;
         }
@@ -368,15 +374,16 @@ void PhotoBehaviour::handle_selection_click(int x, int y) {
 
 
 void PhotoBehaviour::save_image(std::string mode, std::string filename){
-    if(mode == "once"){
-        std::string full_path = dir_path + "/" + filename + ".png";
+    if(mode == "once" || mode == "first"){
+        std::string full_path = dir_path + "/" + filename + "_" + mode + ".png";
         cv::imwrite(full_path, current_image);
     }
     else if(mode == "second"){
+        old_image = cv::imread(dir_path + "/" + filename + "_first.png");
         cv::Mat combined_image;
         cv::hconcat(old_image, current_image, combined_image);
 
-        std::string full_path = dir_path + "/" + filename + ".png";
+        std::string full_path = dir_path + "/" + filename + "_" + mode + ".png";
         cv::imwrite(full_path, combined_image);
     }
     else{

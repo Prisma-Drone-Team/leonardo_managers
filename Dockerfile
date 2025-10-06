@@ -40,6 +40,7 @@ RUN . /opt/ros/$ROS_DISTRO/setup.sh && \
     	libcanberra-gtk3-module \
     	at-spi2-core \
     	dbus-x11 \
+    	nlohmann-json3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y ros-${ROS_DISTRO}-rqt*

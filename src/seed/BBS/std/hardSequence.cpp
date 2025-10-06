@@ -148,7 +148,8 @@ void HardSequenceBehavior::motorSchema(){
         if(((size_t)sequence_step)>=task_list.size()){
             //the sequence is accomplished
             std::cout<<ansi::cyan<<"\t sequence accomplished!"<<ansi::end<<std::endl;
-            wmv_set<bool>(this->getInstance()+".done",true);
+            //wmv_set<bool>(this->getInstance()+".done",true);
+            wmv_set<bool>(arg(0)+"("+arg(2)+").done",true);
         }
         //otherwise
         else{
@@ -170,7 +171,8 @@ void HardSequenceBehavior::exit(){
     std::cout<<arg(0)<<": exit() executed "<<std::endl;
 
     wm_lock();
-    wmv_set<bool>(this->getInstance()+".done",false);
+    //wmv_set<bool>(this->getInstance()+".done",false);
+    wmv_set<bool>(arg(0)+"("+arg(2)+").done",false);
     wm_unlock();
 }
 

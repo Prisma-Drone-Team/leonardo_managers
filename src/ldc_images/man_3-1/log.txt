@@ -1,0 +1,8 @@
+{
+	"task_id": 3,
+	"target_type": "aruco",
+	"target_id": 149,
+	"request_time": "2025-10-01 15:50:43",
+	"completion_time": "2025-10-01 13:45:42",
+	"result": 3,
+}

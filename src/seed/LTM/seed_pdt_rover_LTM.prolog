@@ -71,10 +71,10 @@ schema(alive,[
 	[inputStream,0,["TRUE"]],
 	[rosStream,0,["TRUE"]],
 	%[gui,0,["TRUE"]],
-	[lnd_ground,0,[start,-stop]],
+	[lnd_ground,0,["TRUE"]],
 	[memory,0,["TRUE"]],
-	[requestStream,0,["TRUE"]],
-	[show(requestStream),0,["TRUE"]] ],
+	[requestStream,0,["TRUE"]] ],
+	%[show(requestStream),0,["TRUE"]] ],
 	[],
 	[] ).
 	
@@ -114,7 +114,8 @@ schema(deadline(Task,Deadline),[
 
 % default behaviors, always on during execution independently from the mission
 schema(lnd_ground,[
-	[tfobserver,0,["TRUE"]] ],
+	[tfobserver,1,["TRUE"]] ],
+	%[explore,1,[drone.flying]],
 	%[patrol\and\return,1,[-error,drone.flying]]],
 	%[patrol\and\return,1,[-error]]],
 	[home.reached, mapping.done, target.followed],
@@ -135,13 +136,17 @@ schema(map\and\seek,[
 
 
 
-% find object (drone version), priority: 5
+%% LEONARDO TASK:
+
+
+% find object (drone version), priority: 10
 %	NOTE: this explores and search for the target
 schema(find_object(T,Deadline,ID),[
 	[deadline(find_object(T,Deadline,ID),Deadline),1,["TRUE"]],
+	[obs(T),1,["TRUE"]],
 	[explore,1,[-T.exists]],
 	%[goto(T.target),5,[T.exists]], 
-	[photo(T,once,ID),5,[T.exists]] ],
+	[photo(T,once,ID),10,[T.exists]] ],
 	[T.once.confirmed],
 	[] ).
 
@@ -149,6 +154,8 @@ schema(find_object(T,Deadline,ID),[
 %	NOTE: T.observed must be stated by the GCS after the operator's ok
 schema(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),[
 	[deadline(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),Deadline),1,["TRUE"]],
+	[obs(T),1,["TRUE"]],
+	[obs(T.target),1,["TRUE"]],
 	[cover(Z1,Z2,Z3,Z4),1,[-T.exists]],
 	[goto(T.target,observe),2,[T.exists]],
 	[photo(T,first,ID),2,[T.target.reached]],
@@ -168,17 +175,19 @@ schema(follow_sequence(S,Deadline,ID),[
 	[] ).
 
 schema(move_by(T,ID),[
+	[obs(T),1,["TRUE"]],
+	[obs(T.target),1,["TRUE"]],
 	[goto(T.target,observe),2,[T.exists]],
 	[photo(T,once,ID),2,[T.target.reached]],
 	[timer(T.observed,true,0.1),1,[T.once.confirmed]] ],
 	[T.observed],
 	[] ).
 
-% emergency rtb, priority 10
+% emergency rtb, priority 20
 schema(emergency_rtb(Deadline,ID),[
 	[deadline(emergency_rtb(Deadline,ID),Deadline),1,["TRUE"]],
-	[goto(rover/map,observe),10,["TRUE"]] ],
-	[home.reached],
+	[goto(rover/map),20,["TRUE"]] ],
+	[rover/map.reached],
 	[] ).
 
 
@@ -210,6 +219,8 @@ schema(follow(T), [], [T.followed], [T.distance] ).
 schema(wait, [], [], [] ).
 
 schema(tfobserver, [], [], [] ).
+
+schema(obs(_), [], [], [] ).
 
 %%--
 

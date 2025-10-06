@@ -74,8 +74,8 @@ schema(alive,[
 	%[lnd_aerial,0,[start,-stop]],
 	[lnd_airborn,0,[start,-stop]],
 	[memory,0,["TRUE"]],
-	[requestStream,0,["TRUE"]],
-	[show(requestStream),0,["TRUE"]] ],
+	[requestStream,0,["TRUE"]] ],
+	%[show(requestStream),0,["TRUE"]] ],
 	[],
 	[] ).
 	
@@ -122,19 +122,25 @@ schema(lnd_airborn,[
 
 
 %%OLD
-schema(lnd_aerial,[
-	[tfobserver,0,["TRUE"]],
-	[emergency\land,0,[error]],
-	[patrol\and\return,1,[-error]]],
-	[landed, mapping.done, target.followed],
-	[] ).
+%schema(lnd_aerial,[
+%	[tfobserver,0,["TRUE"]],
+%	[emergency\land,0,[error]],
+%	[patrol\and\return,1,[-error]]],
+%	[landed, mapping.done, target.followed],
+%	[] ).
 
-% find object (drone version), priority: 5
+
+
+%% LEONARDO TASK:
+
+
+% find object (drone version), priority: 10
 %	NOTE: this only performs circle when target object is found
 schema(find_object(T,Deadline,ID),[
 	[deadline(find_object(T,Deadline,ID),Deadline),1,["TRUE"]],
-	[circle(T),5,[T.exists, flying]], 
-	[photo(T,continuous,ID),5,[circle(T).running]] ],
+	[obs(T),1,["TRUE"]],
+	[flyto(circle(T)),10,[T.exists, flying, -T.fail]], 
+	[photo(T,continuous,ID),1,[circle(T).running]] ],
 	[circle(T).done],
 	[] ).
 
@@ -142,8 +148,10 @@ schema(find_object(T,Deadline,ID),[
 %	NOTE: T.observed must be stated by the GCS after the operator's ok
 schema(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),[
 	[deadline(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),Deadline),1,["TRUE"]],
-	[cover(Z1,Z2,Z3,Z4),1,[-T.exists, flying]],
-	[flyto(T.target,observe),2,[T.exists, flying]],
+	[obs(T),1,["TRUE"]],
+	[obs(T.target),1,["TRUE"]],
+	[cover(Z1,Z2,Z3,Z4),1,[-T.exists, flying, -cover(Z1,Z2,Z3,Z4).fail]],
+	[flyto(T.target,observe),2,[T.exists, flying, -T.fail]],
 	[photo(T,first,ID),2,[T.target.reached]],
 	[timer(T.second.ready,true,2.1),1,[T.first.confirmed]],
 	[photo(T,second,ID),2,[T.second.ready]],
@@ -151,9 +159,9 @@ schema(find_target(T,Z1,Z2,Z3,Z4,Deadline,ID),[
 	[T.observed],
 	[] ).
 
-% follow sequence
+% follow sequence, priority: 5
 %	NOTE: this can be implemented through a hardSequence as follows:
-%		   hardSequence([fly_by(T1),fly_by(T2), ..., fly_by(TN)])
+%		   hardSequence([fly_by(T1,ID),fly_by(T2,ID), ..., fly_by(TN,ID)])
 schema(follow_sequence(S,Deadline,ID),[
 	[deadline(follow_sequence(S,Deadline,ID),Deadline),1,["TRUE"]],
 	[hardSequence(S,fs),5,["TRUE"]] ],
@@ -161,7 +169,9 @@ schema(follow_sequence(S,Deadline,ID),[
 	[] ).
 
 schema(fly_by(T,ID),[
-	[flyto(T.target,observe),2,[T.exists, flying]],
+	[obs(T),1,["TRUE"]],
+	[obs(T.target),1,["TRUE"]],
+	[flyto(T.target,observe),2,[T.exists, flying, -T.target.fail]],
 	[photo(T,once,ID),2,[T.target.reached]],
 	[timer(T.observed,true,0.1),1,[T.once.confirmed]] ],
 	[T.observed],
@@ -226,6 +236,8 @@ schema(cover(Z1,Z2,Z3,Z4), [], [cover(Z1,Z2,Z3,Z4).done], [] ).
 schema(wait, [], [], [] ).
 
 schema(tfobserver, [], [], [] ).
+
+schema(obs(_), [], [], [] ).
 
 %%--
 

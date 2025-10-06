@@ -53,7 +53,9 @@ class HttpBridgeNode(Node):
 
 
         # Params
-        self.declare_parameter('server_url', 'http://127.0.0.1:5000')
+        #self.declare_parameter('server_url', 'http://127.0.0.1:5000')
+        self.declare_parameter('server_url', 'http://192.168.3.231:5000')
+        #self.declare_parameter('server_url', 'http://192.168.3.104:5000')
         self.declare_parameter('client_id', 'unina_client')
 
         self.server_url = self.get_parameter('server_url').value
@@ -67,7 +69,7 @@ class HttpBridgeNode(Node):
 
         self.get_logger().info("HTTP Bridge Node started")
 
-    def lookup_target_sector(self, target_frame: String) -> String:
+    def lookup_target_sector(self, target_frame: str) -> str:
         try:
             # Lookup transform from map -> target
             trans = self.tf_buffer.lookup_transform(
@@ -124,7 +126,8 @@ class HttpBridgeNode(Node):
         # replace lists (TO BE CHANGED BY LEONARDO)
         json_str = json_str.replace("(", "[").replace(")", "]")
 
-        print("new json:", json_str)
+        print("NEW JSON RECEIVED:")
+        print(json_str)
 
         try:
             data = json.loads(json_str)
@@ -346,7 +349,7 @@ class HttpBridgeNode(Node):
             response = requests.get(url, headers=self.headers, stream=True)
             for line in response.iter_lines():
                 if line:
-                    print(line.decode('utf-8'))
+                    #print(line.decode('utf-8'))
                     msg = line.decode('utf-8')
 
                     # parse command
@@ -357,6 +360,11 @@ class HttpBridgeNode(Node):
 
                     # translate into seed commands
                     self.leo_to_seed(task)
+
+                    print("CURRENT REQUEST DB:")
+                    for item in self.request_db:
+                        print(self.request_db[item])
+                    print("---")
 
         except requests.exceptions.ConnectionError:
             self.get_logger().error("Connection error: could not connect to stream endpoint")
@@ -415,12 +423,30 @@ class HttpBridgeNode(Node):
         # Split by comma, then strip spaces
         parts = [p.strip() for p in s.split(",")]
 
-        id = parts[0]
+        str_id = parts[0]
+        id = int(str_id)
         timestamp = parts[1]
         file_path = parts[2]
 
+        #print("CURRENT REQUEST DB (RESULT):")
+        #for item in self.request_db:
+        #    print(self.request_db[item])
+        #    print(item)
+        #    if(item == int(std_id)):
+        #        print("id found:",std_id)
+        #        id = item
+        #print("---")
+
+        if(id == 0):
+            return
+
         json_reply = {}
         have_file = False
+        print(id)
+        print(timestamp)
+        print(file_path)
+        res_task = self.request_db[id]
+        print(res_task["task_type"])
         if self.request_db[id]["task_type"] == "find_object":
             # OK
             json_reply = {
@@ -434,7 +460,7 @@ class HttpBridgeNode(Node):
             have_file = True
         elif self.request_db[id]["task_type"] == "find_target":
             # OK
-            sect = self.lookup_target_sector(self.request_db[id]["target"])
+            sect = self.lookup_target_sector(str(self.request_db[id]["target"]))
             json_reply = {
                 "task_id": id,
                 "task_type": self.request_db[id]["task_type"],

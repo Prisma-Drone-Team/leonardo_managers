@@ -181,6 +181,8 @@ schema(wait, [], [], [] ).
 
 schema(tfobserver, [], [], [] ).
 
+schema(obs(_), [], [], [] ).
+
 %%--
 
 
