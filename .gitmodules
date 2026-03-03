@@ -1,3 +1,4 @@
-[submodule "detection_publisher_pkg"]
- path = src/detection_publisher_pkg
- url = https://github.com/Prisma-Drone-Team/detection_publisher_pkg.git
+[submodule "src/detection_publisher_pkg"]
+	path = src/detection_publisher_pkg
+	url = https://github.com/Prisma-Drone-Team/detection_publisher_pkg.git
+	branch = main
